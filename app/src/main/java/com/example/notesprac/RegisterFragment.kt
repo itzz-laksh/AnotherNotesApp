@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.lifecycle.observe
 import androidx.navigation.fragment.findNavController
 import com.example.notesprac.databinding.FragmentRegisterBinding
 import com.example.notesprac.models.UserRequest
@@ -30,9 +29,20 @@ class RegisterFragment : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         _binding = FragmentRegisterBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.btnSignUp.setOnClickListener {
-            authViewModel.registerUser(UserRequest("xyz@gmail.com","114454124", "XYZ1414"))
+            val validatorResult = validInputUser()
+            if(validatorResult.first){
+                authViewModel.registerUser(getUserRequest())
+            } else {
+                binding.txtError.text = validatorResult.second
+            }
+
             //findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
         }
 
@@ -41,13 +51,16 @@ class RegisterFragment : Fragment() {
             findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
         }
 
+        bindObserver()
 
-
-        return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private fun bindObserver() {
         authViewModel.userResponseLiveData.observe(viewLifecycleOwner, Observer {
             binding.progressBar.isVisible = false
             when(it){
@@ -64,9 +77,15 @@ class RegisterFragment : Fragment() {
         })
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    private fun getUserRequest() : UserRequest {
+        val emailAddress = binding.txtEmail.text.toString()
+        val userName = binding.txtUsername.text.toString()
+        val password = binding.txtPassword.text.toString()
+        return UserRequest(emailAddress,password,userName)
     }
 
+    private fun validInputUser(): Pair<Boolean,String> {
+        val userRequest = getUserRequest()
+        return authViewModel.validCredentials(userRequest.email,userRequest.username,userRequest.password,false)
+    }
 }
